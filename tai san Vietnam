@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vietnam Wealth Distribution · Ai Sở Hữu Tài Sản Quốc Gia</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400&family=Josefin+Sans:ital,wght@0,100;0,200;0,300;0,400;0,600;0,700;1,100;1,200;1,300&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#F5EDD8;--bg2:#EDE3C8;--bg3:#E5D8B8;
+  --ink:#1A1008;--ink2:#2A1A0A;
+  --indigo:#1A2870;--ind2:#2030A0;--ind3:#2840CC;
+  --rust:#8B2010;--rust2:#B03018;--rust3:#D04020;
+  --jade:#1A5030;--jade2:#226040;--jade3:#2A7A50;
+  --gold:#8B6010;--gold2:#A87820;--gold3:#C89030;
+  --text:#1A1008;--muted:rgba(26,16,8,.45);--dim:rgba(26,16,8,.16);
+  --bd:rgba(26,16,8,.12);--bd2:rgba(26,16,8,.22);
+}
+html,body{height:100vh;overflow:hidden;background:var(--bg);font-family:'Josefin Sans',sans-serif;color:var(--text)}
+
+/* Japanese washi paper texture */
+body::before{
+  content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='600'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.45' numOctaves='5' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='600' height='600' filter='url(%23n)' opacity='0.045'/%3E%3C/svg%3E"),
+    linear-gradient(135deg,rgba(139,96,16,.04) 0%,transparent 50%,rgba(26,40,112,.03) 100%);
+}
+/* Subtle woodblock hatching lines */
+body::after{
+  content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:
+    repeating-linear-gradient(170deg,transparent 0,transparent 12px,rgba(26,16,8,.015) 12px,rgba(26,16,8,.015) 13px),
+    repeating-linear-gradient(80deg,transparent 0,transparent 18px,rgba(26,16,8,.01) 18px,rgba(26,16,8,.01) 19px);
+}
+
+.app{position:relative;z-index:1;display:grid;grid-template-rows:50px 1fr;grid-template-columns:1fr 400px;height:100vh}
+
+/* HEADER — editorial Japanese newspaper style */
+.hdr{
+  grid-column:1/-1;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 24px;
+  background:var(--ink);
+  border-bottom:3px solid var(--rust);
+  z-index:80;position:relative;
+}
+.hdr::after{content:'';position:absolute;bottom:-6px;left:0;right:0;height:2px;background:var(--gold);opacity:.5}
+.h-l{display:flex;align-items:center;gap:14px}
+.h-stamp{
+  background:var(--rust);color:var(--bg);
+  font-family:'Josefin Sans',sans-serif;font-weight:600;font-size:8px;
+  letter-spacing:.35em;padding:4px 10px;text-transform:uppercase;
+}
+.h-title{font-family:'Libre Baskerville',serif;font-weight:700;font-size:16px;
+  letter-spacing:.04em;color:var(--bg);text-shadow:0 1px 4px rgba(0,0,0,.3)}
+.h-div{width:1px;height:22px;background:rgba(245,237,216,.2)}
+.h-sub{font-family:'Josefin Sans',sans-serif;font-size:8px;letter-spacing:.25em;
+  text-transform:uppercase;color:rgba(245,237,216,.38)}
+.h-r{display:flex;align-items:center;gap:14px}
+.hkv{text-align:right}
+.hvv{font-family:'Libre Baskerville',serif;font-size:15px;color:var(--gold3);line-height:1}
+.hvk{font-size:7px;letter-spacing:.2em;text-transform:uppercase;color:rgba(245,237,216,.32);margin-top:2px}
+.live{display:flex;align-items:center;gap:5px;font-size:7px;letter-spacing:.2em;color:rgba(245,237,216,.35)}
+.ld{width:6px;height:6px;border-radius:50%;background:var(--jade3);box-shadow:0 0 8px var(--jade3);animation:lp 2.2s ease-in-out infinite}
+@keyframes lp{0%,100%{opacity:1}50%{opacity:.1}}
+
+/* ── MAIN CANVAS ── */
+.canvas-area{position:relative;overflow:hidden;background:var(--bg)}
+#cvs{position:absolute;inset:0;width:100%;height:100%}
+
+/* TOOLTIP */
+#tip{position:fixed;z-index:500;pointer-events:none;display:none;
+  background:var(--ink);border-left:4px solid var(--rust);
+  padding:14px 18px;min-width:260px;max-width:320px;
+  box-shadow:4px 4px 0 rgba(26,16,8,.3),8px 8px 20px rgba(0,0,0,.35)}
+.tt-badge{font-size:7px;letter-spacing:.35em;text-transform:uppercase;margin-bottom:6px;color:rgba(245,237,216,.4)}
+.tt-name{font-family:'Libre Baskerville',serif;font-size:18px;font-weight:700;line-height:1.15;margin-bottom:4px}
+.tt-pct{font-family:'Libre Baskerville',serif;font-size:22px;font-weight:700;margin-bottom:6px}
+.tt-desc{font-size:11px;line-height:1.65;color:rgba(245,237,216,.55);font-family:'Noto Serif',serif;font-style:italic}
+.tt-stats{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:10px}
+.tts{background:rgba(255,255,255,.04);border:1px solid rgba(245,237,216,.1);padding:7px 9px}
+.ttsv{font-family:'Libre Baskerville',serif;font-size:12px;color:var(--bg);line-height:1}
+.ttsk{font-size:7px;letter-spacing:.15em;text-transform:uppercase;color:rgba(245,237,216,.35);margin-top:2px}
+
+/* ── RIGHT PANEL ── */
+.rp{border-left:2px solid var(--bd2);overflow:hidden;display:flex;flex-direction:column;background:var(--bg2)}
+.rp-head{padding:16px 20px 12px;background:var(--ink2);border-bottom:2px solid var(--gold);flex-shrink:0}
+.rph-kicker{font-size:8px;letter-spacing:.4em;text-transform:uppercase;color:var(--gold3);margin-bottom:8px}
+.rph-title{font-family:'Libre Baskerville',serif;font-weight:700;font-size:20px;letter-spacing:.03em;color:var(--bg);line-height:1.08;margin-bottom:5px}
+.rph-sub{font-family:'Noto Serif',serif;font-style:italic;font-size:12px;color:rgba(245,237,216,.42);line-height:1.45}
+.tabs{display:flex;border-bottom:1px solid var(--bd);flex-shrink:0;background:var(--bg3)}
+.tab{font-family:'Josefin Sans',sans-serif;font-size:8.5px;letter-spacing:.2em;text-transform:uppercase;
+  padding:8px 14px;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;transition:all .18s}
+.tab:hover{color:var(--ink)}
+.tab.on{color:var(--rust);border-bottom-color:var(--rust)}
+.rbody{flex:1;overflow-y:auto}
+.rbody::-webkit-scrollbar{width:3px}
+.rbody::-webkit-scrollbar-thumb{background:var(--bd2)}
+
+/* Content blocks */
+.section{padding:14px 18px;border-bottom:1px solid var(--bd)}
+.sec-h{font-size:8px;letter-spacing:.28em;text-transform:uppercase;color:var(--muted);
+  margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.sec-h::after{content:'';flex:1;height:1px;background:var(--bd)}
+.wealth-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(26,16,8,.05);cursor:pointer;transition:background .1s}
+.wealth-row:hover{background:rgba(26,16,8,.04);margin:0 -18px;padding-left:18px;padding-right:18px}
+.wr-label{font-family:'Noto Serif',serif;font-size:12px;font-weight:600;min-width:100px;flex-shrink:0;letter-spacing:.01em}
+.wr-bar-w{flex:1;height:6px;background:rgba(26,16,8,.06);overflow:hidden}
+.wr-bar{height:100%;transition:width .3s}
+.wr-pct{font-family:'Josefin Sans',sans-serif;font-size:10px;font-weight:700;min-width:40px;text-align:right;flex-shrink:0}
+.wr-val{font-family:'Josefin Sans',sans-serif;font-size:9px;min-width:52px;text-align:right;flex-shrink:0;color:var(--muted)}
+.comp-row{display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid rgba(26,16,8,.04)}
+.cr-country{font-family:'Noto Serif',serif;font-size:11px;font-weight:600;min-width:80px;flex-shrink:0}
+.cr-gini{font-family:'Josefin Sans',sans-serif;font-size:9.5px;font-weight:700;min-width:38px;flex-shrink:0}
+.cr-bw{flex:1;height:4px;background:rgba(26,16,8,.06);overflow:hidden}
+.cr-bf{height:100%;opacity:.7}
+.insight-card{border-left:3px solid;padding:10px 14px;margin-bottom:8px;background:rgba(255,255,255,.4)}
+.ic-h{font-family:'Libre Baskerville',serif;font-size:12px;font-weight:700;letter-spacing:.02em;margin-bottom:4px}
+.ic-b{font-family:'Noto Serif',serif;font-style:italic;font-size:11px;color:var(--muted);line-height:1.65}
+</style>
+</head>
+<body>
+
+<div id="tip">
+  <div class="tt-badge" id="tb"></div>
+  <div class="tt-name" id="tn"></div>
+  <div class="tt-pct" id="tp"></div>
+  <div class="tt-desc" id="td"></div>
+  <div class="tt-stats" id="ts"></div>
+</div>
+
+<div class="app">
+<div class="hdr">
+  <div class="h-l">
+    <div class="h-stamp">PHÂN TÍCH MẬT</div>
+    <div><div class="h-title">Ai Thực Sự Sở Hữu Tài Sản Quốc Gia Vietnam?</div><div class="h-sub">Vietnam Wealth Distribution · Who Owns What · 2024</div></div>
+    <div class="h-div"></div>
+    <div class="h-sub">Di chuyển chuột · Nhấp để chi tiết</div>
+  </div>
+  <div class="h-r">
+    <div class="live"><span class="ld"></span>LIVE</div>
+    <div class="h-div"></div>
+    <div class="hkv"><div class="hvv">$1,040B</div><div class="hvk">Total Assets</div></div>
+    <div class="h-div"></div>
+    <div class="hkv"><div class="hvv">Gini 0.38</div><div class="hvk">Inequality Index</div></div>
+    <div class="h-div"></div>
+    <div class="hkv"><div class="hvv" id="clk">—</div><div class="hvk">HCM Time</div></div>
+  </div>
+</div>
+
+<div class="canvas-area">
+  <canvas id="cvs"></canvas>
+</div>
+
+<div class="rp">
+  <div class="rp-head">
+    <div class="rph-kicker">Phân Tích Phân Phối Tài Sản</div>
+    <div class="rph-title">Ai Sở Hữu<br>Tài Sản VN?</div>
+    <div class="rph-sub">Từ đất đai Nhà nước đến túi tiền tỷ phú — ai thực sự kiểm soát $1,040B tài sản quốc gia.</div>
+  </div>
+  <div class="tabs">
+    <div class="tab on" onclick="sw('dist',this)">Phân Phối</div>
+    <div class="tab" onclick="sw('comp',this)">So Sánh</div>
+    <div class="tab" onclick="sw('insight',this)">Phân Tích</div>
+  </div>
+  <div class="rbody" id="rbody"></div>
+</div>
+</div>
+
+<script>
+const cvs = document.getElementById('cvs');
+const ctx = cvs.getContext('2d');
+let W, H, tick = 0, animT = 0;
+let hovSeg = null;
+
+function resize(){W=cvs.width=cvs.parentElement.clientWidth;H=cvs.height=cvs.parentElement.clientHeight;}
+window.addEventListener('resize', ()=>{resize(); renderPanel();});
+resize();
+
+// ═══════════════════════════════════════════
+// WEALTH DATA
+// ═══════════════════════════════════════════
+
+// Population percentiles and their wealth share
+const LORENZ = [
+  {pct:0, wealth:0},
+  {pct:10, wealth:1.2},
+  {pct:20, wealth:3.2},
+  {pct:30, wealth:6.0},
+  {pct:40, wealth:9.8},
+  {pct:50, wealth:14.8},
+  {pct:60, wealth:21.2},
+  {pct:70, wealth:29.5},
+  {pct:80, wealth:41.0},
+  {pct:90, wealth:57.2},
+  {pct:95, wealth:68.5},
+  {pct:99, wealth:83.0},
+  {pct:100, wealth:100},
+];
+
+const SEGMENTS = [
+  { id:'state', label:'Tài Sản Nhà Nước', en:'State Assets',
+    pct:38, valB:395, col:'#8B2010', colLight:'#D04020',
+    badge:'NHÀ NƯỚC',
+    desc:'Đất đai (Nhà nước sở hữu 100% theo Hiến pháp), DNNN, cơ sở hạ tầng, tài nguyên khoáng sản. PVN, EVN, Viettel, Big-4 banks. Đây là "wealth" không thể tư nhân hóa theo luật VN hiện hành.',
+    subs:[
+      {name:'Đất đai quốc gia',pct:14,val:'$145B',desc:'100% thuộc Nhà nước theo Hiến pháp'},
+      {name:'DNNN & SOE',pct:12,val:'$125B',desc:'Vốn chủ sở hữu Nhà nước tại 2,300+ DNNN'},
+      {name:'Hạ tầng & tiện ích',pct:8,val:'$83B',desc:'Đường, cầu, điện, nước, cảng biển, sân bay'},
+      {name:'Tài nguyên khoáng sản',pct:4,val:'$42B',desc:'Dầu khí, than, quặng — đang khai thác'},
+    ]
+  },
+  { id:'top_elite', label:'Tầng Lớp Siêu Giàu', en:'Ultra-High Net Worth',
+    pct:8, valB:83, col:'#1A2870', colLight:'#2840CC',
+    badge:'TOP 0.1%',
+    desc:'~100,000 người. Tỷ phú USD (30+ người) và triệu phú USD (>70,000 người). Tài sản tập trung vào Vingroup, Masan, FPT, Hòa Phát. Bất động sản cao cấp Hà Nội-TP.HCM chiếm 60%+ wealth.',
+    subs:[
+      {name:'Tỷ phú USD (30+ người)',pct:2.2,val:'$23B',desc:'PNV $4.9B, NTPT $2.5B, TDL $1.8B...'},
+      {name:'Triệu phú USD (70K+)',pct:3.8,val:'$40B',desc:'$1M-$100M mỗi người'},
+      {name:'BĐS cao cấp',pct:1.5,val:'$16B',desc:'Penthouse, villa, biệt thự nghỉ dưỡng'},
+      {name:'Cổ phiếu & tài sản tài chính',pct:0.5,val:'$4B',desc:'Vốn hóa niêm yết của nhóm elite'},
+    ]
+  },
+  { id:'upper_mid', label:'Trung Lưu Cao', en:'Upper-Middle Class',
+    pct:14, valB:146, col:'#1A5030', colLight:'#2A7A50',
+    badge:'TOP 10-20%',
+    desc:'~9 triệu người. Thu nhập $1,000-$3,000/tháng. Sở hữu căn hộ đô thị, ô tô, danh mục đầu tư nhỏ. Tập trung ở Hà Nội, TP.HCM, Đà Nẵng. Tầng lớp này tăng trưởng nhanh nhất 2015-2024.',
+    subs:[
+      {name:'Căn hộ & nhà đô thị',pct:7,val:'$73B',desc:'Chung cư mid-range, nhà phố'},
+      {name:'Tiết kiệm ngân hàng',pct:3.5,val:'$36B',desc:'Tiền gửi ổn định, ít rủi ro'},
+      {name:'Doanh nghiệp vừa và nhỏ',pct:2,val:'$21B',desc:'SME, hộ kinh doanh'},
+      {name:'Cổ phiếu & quỹ',pct:1.5,val:'$16B',desc:'Đầu tư chứng khoán lẻ'},
+    ]
+  },
+  { id:'mid', label:'Tầng Lớp Trung Lưu', en:'Middle Class',
+    pct:18, valB:187, col:'#8B6010', colLight:'#C89030',
+    badge:'30-70% PERCENTILE',
+    desc:'~36 triệu người. Công nhân kỹ thuật, giáo viên, cán bộ, doanh nghiệp nhỏ. Sở hữu nhà ở vừa phải, xe máy, tiết kiệm nhỏ. Đây là tầng lớp bị giá BĐS đô thị đẩy ra ngoài vành đai 3.',
+    subs:[
+      {name:'Nhà ở bình dân',pct:8,val:'$83B',desc:'Nhà riêng ven đô, chung cư giá rẻ'},
+      {name:'Tiết kiệm & bảo hiểm',pct:5,val:'$52B',desc:'Gửi tiết kiệm ngân hàng, bảo hiểm nhân thọ'},
+      {name:'Xe máy & phương tiện',pct:2.5,val:'$26B',desc:'50M xe máy tại VN'},
+      {name:'Vốn hộ kinh doanh',pct:2.5,val:'$26B',desc:'Kinh doanh cá thể, quán ăn, dịch vụ'},
+    ]
+  },
+  { id:'lower_mid', label:'Tầng Lớp Thu Nhập Thấp', en:'Lower-Middle Income',
+    pct:14, valB:146, col:'#6A4A20', colLight:'#9A7030',
+    badge:'20-30% PERCENTILE',
+    desc:'~28 triệu người. Công nhân may mặc, chế biến thực phẩm. Thu nhập $300-$600/tháng. Ít hoặc không có bất động sản. Sống thuê hoặc nhà cha mẹ. Dễ tổn thương khi kinh tế biến động.',
+    subs:[
+      {name:'Nhà ở nông thôn',pct:7,val:'$73B',desc:'Nhà đất nông thôn, giá trị thấp'},
+      {name:'Tiết kiệm nhỏ',pct:4,val:'$42B',desc:'Ít tiết kiệm, dễ cạn kiệt khi bệnh'},
+      {name:'Công cụ sản xuất',pct:2,val:'$21B',desc:'Nông cụ, máy sản xuất nhỏ'},
+      {name:'Tài sản tiêu dùng',pct:1,val:'$10B',desc:'Điện tử gia dụng cũ'},
+    ]
+  },
+  { id:'poor', label:'Nhóm Dễ Bị Tổn Thương', en:'Vulnerable Population',
+    pct:8, valB:83, col:'#4A3010', colLight:'#7A5020',
+    badge:'BOTTOM 10-20%',
+    desc:'~16 triệu người. Nông dân nghèo miền núi, dân tộc thiểu số, người già không lương hưu. Tài sản gần như bằng 0. Thu nhập dưới $200/tháng. Phụ thuộc vào chương trình an sinh xã hội.',
+    subs:[
+      {name:'Đất nông nghiệp nhỏ',pct:5,val:'$52B',desc:'Manh mún, ít giá trị thương mại'},
+      {name:'Tài sản cơ bản',pct:3,val:'$31B',desc:'Nhà tạm, đồ dùng tối thiểu'},
+    ]
+  },
+  { id:'fdi_foreign', label:'Tài Sản FDI & Nước Ngoài', en:'Foreign-owned Assets',
+    pct:7, valB:73, col:'#1A1A8B', colLight:'#2828BB',
+    badge:'FDI FOREIGN',
+    desc:'Tài sản sở hữu bởi nhà đầu tư nước ngoài. Samsung VN $21B, LG, Intel, Foxconn, Toyota, Honda. Các quỹ ngoại (Dragon Capital, VinaCapital, Pyn Elite) kiểm soát 30-35% free float TTCK.',
+    subs:[
+      {name:'FDI sản xuất (Samsung,LG...)',pct:3.5,val:'$36B',desc:'Tài sản cố định nhà máy, thiết bị'},
+      {name:'FDI BĐS & khách sạn',pct:1.5,val:'$16B',desc:'Resort Phú Quốc, khách sạn 5 sao, văn phòng'},
+      {name:'Quỹ ngoại (DCG, VCG, Pyn)',pct:2,val:'$21B',desc:'Cổ phiếu niêm yết, AUM $6B+'},
+    ]
+  },
+];
+
+// Comparator countries (Gini + top 1% share)
+const COMPARATORS = [
+  {country:'Việt Nam 2024',  gini:38,  top1:25, top10:57, col:'#8B2010'},
+  {country:'Trung Quốc',     gini:49,  top1:31, top10:68, col:'#CC1010'},
+  {country:'Thái Lan',       gini:43,  top1:28, top10:63, col:'#1A3A8B'},
+  {country:'Indonesia',      gini:38,  top1:23, top10:56, col:'#0D7040'},
+  {country:'Philippines',    gini:44,  top1:30, top10:65, col:'#8B6010'},
+  {country:'Mỹ',             gini:41,  top1:35, top10:70, col:'#1A2870'},
+  {country:'Đan Mạch',       gini:29,  top1:14, top10:39, col:'#8B3040'},
+  {country:'Singapore',      gini:45,  top1:32, top10:67, col:'#104040'},
+];
+
+// ═══════════════════════════════════════════
+// DRAWING
+// ═══════════════════════════════════════════
+function drawFrame(){
+  tick++;
+  animT = Math.min(1, animT + .018);
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle = '#F5EDD8'; ctx.fillRect(0,0,W,H);
+
+  // Paper grain overlay on canvas
+  ctx.fillStyle = 'rgba(26,16,8,.012)';
+  for(let x=0;x<W;x+=18) for(let y=0;y<H;y+=18)
+    if(Math.random()<.08) ctx.fillRect(x+Math.random()*5-2,y+Math.random()*5-2,1.5,1.5);
+
+  // Coordinate axes for Lorenz curve
+  const pad = {l:80, r:60, t:50, b:80};
+  const cw2 = W-pad.l-pad.r, ch2 = H-pad.t-pad.b;
+
+  // ── LORENZ CURVE ──
+  drawLorenz(pad, cw2, ch2);
+
+  // ── WEALTH PYRAMID (right side) ──
+  drawPyramid(pad, cw2, ch2);
+
+  // ── ASSET BREAKDOWN ARC (center) ──
+  drawDonut(pad, cw2, ch2);
+
+  requestAnimationFrame(drawFrame);
+}
+
+function drawLorenz(pad, cw2, ch2){
+  const lx = pad.l, ly = pad.t;
+  const lw = cw2*.44, lh = ch2;
+
+  // Grid
+  for(let i=0;i<=4;i++){
+    const x = lx+lw*i/4, y2 = ly+lh*i/4;
+    ctx.strokeStyle='rgba(26,16,8,.06)'; ctx.lineWidth=.5;
+    ctx.beginPath(); ctx.moveTo(lx,y2); ctx.lineTo(lx+lw,y2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x,ly); ctx.lineTo(x,ly+lh); ctx.stroke();
+    ctx.save();
+    ctx.font='400 8px "Josefin Sans",sans-serif';
+    ctx.fillStyle='rgba(26,16,8,.35)'; ctx.textAlign='right';
+    ctx.fillText((100-i*25)+'%', lx-5, ly+lh*i/4+3);
+    ctx.textAlign='center';
+    ctx.fillText((i*25)+'%', lx+lw*i/4, ly+lh+15);
+    ctx.restore();
+  }
+
+  // Axes labels
+  ctx.save();
+  ctx.font='500 8px "Josefin Sans",sans-serif';
+  ctx.fillStyle='rgba(26,16,8,.45)';
+  ctx.textAlign='center'; ctx.textBaseline='bottom';
+  ctx.fillText('% Dân số (từ nghèo → giàu)', lx+lw/2, ly+lh+35);
+  ctx.translate(lx-45, ly+lh/2);
+  ctx.rotate(-Math.PI/2);
+  ctx.fillText('% Của cải (tích lũy)', 0, 0);
+  ctx.restore();
+
+  // Equality line
+  ctx.strokeStyle='rgba(26,16,8,.15)'; ctx.lineWidth=1;
+  ctx.setLineDash([6,6]);
+  ctx.beginPath(); ctx.moveTo(lx,ly+lh); ctx.lineTo(lx+lw,ly); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.save(); ctx.font='italic 9px "Noto Serif",serif'; ctx.fillStyle='rgba(26,16,8,.25)';
+  ctx.textAlign='center';
+  ctx.fillText('Bình đẳng tuyệt đối', lx+lw*.55, ly+lh*.38);
+  ctx.restore();
+
+  // Actual Lorenz curve
+  ctx.beginPath();
+  LORENZ.forEach((pt,i) => {
+    const x = lx + lw*(pt.pct/100);
+    const y = ly + lh*(1-pt.wealth/100);
+    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  });
+  ctx.strokeStyle='rgba(139,32,16,.7)'; ctx.lineWidth=2;
+  ctx.stroke();
+
+  // Fill area
+  ctx.beginPath();
+  ctx.moveTo(lx,ly+lh);
+  LORENZ.forEach(pt => {
+    const x = lx + lw*(pt.pct/100);
+    const y = ly + lh*(1-pt.wealth/100);
+    ctx.lineTo(x,y);
+  });
+  ctx.closePath();
+  ctx.fillStyle='rgba(139,32,16,.06)'; ctx.fill();
+
+  // Gini label
+  ctx.save();
+  ctx.font='700 11px "Josefin Sans",sans-serif'; ctx.fillStyle=colors.rust;
+  ctx.textAlign='left';
+  ctx.fillText('Gini = 0.38', lx+lw*.15, ly+lh*.65);
+  ctx.font='italic 9px "Noto Serif",serif'; ctx.fillStyle='rgba(26,16,8,.4)';
+  ctx.fillText('(Diện tích giữa 2 đường)', lx+lw*.15, ly+lh*.75);
+  ctx.restore();
+
+  // Title
+  ctx.save();
+  ctx.font='700 11px "Josefin Sans",sans-serif'; ctx.fillStyle='rgba(26,16,8,.6)';
+  ctx.textAlign='left'; ctx.letterSpacing='.1em';
+  ctx.fillText('ĐƯỜNG LORENZ', lx, ly-12);
+  ctx.restore();
+
+  // Annotation points
+  const annotations = [
+    {idx:5, label:'Top 40% sở hữu 85%'},
+    {idx:9, label:'Top 10% sở hữu 43%'},
+  ];
+  annotations.forEach(a => {
+    const pt = LORENZ[a.idx];
+    const x = lx + lw*(pt.pct/100), y = ly + lh*(1-pt.wealth/100);
+    ctx.beginPath(); ctx.arc(x,y,4,0,Math.PI*2);
+    ctx.fillStyle=colors.rust2; ctx.fill();
+    ctx.save(); ctx.font='italic 8.5px "Noto Serif",serif'; ctx.fillStyle='rgba(139,32,16,.8)';
+    ctx.textAlign='left'; ctx.shadowColor='rgba(245,237,216,.9)'; ctx.shadowBlur=4;
+    ctx.fillText(a.label, x+8, y-3);
+    ctx.restore();
+  });
+}
+
+const colors={rust:'#8B2010',rust2:'#B03018',indigo:'#1A2870',jade:'#1A5030',gold:'#8B6010',br:'#6A4A20',dark:'#4A3010',fdi:'#1A1A8B'};
+
+function drawPyramid(pad, cw2, ch2){
+  const px = pad.l + cw2*.46 + 20;
+  const pw = cw2*.26;
+  const ph = ch2;
+  const py = pad.t;
+
+  ctx.save();
+  ctx.font='700 11px "Josefin Sans",sans-serif'; ctx.fillStyle='rgba(26,16,8,.55)';
+  ctx.textAlign='left'; ctx.textBaseline='top';
+  ctx.fillText('THÁP TÀI SẢN', px, py-12);
+  ctx.restore();
+
+  const segs = [...SEGMENTS].reverse();
+  const total = segs.reduce((s,g)=>s+g.pct,0);
+  let yOff = 0;
+
+  segs.forEach((seg,i) => {
+    const segH = (seg.pct/total)*ph * animT;
+    const frac = yOff/ph;
+    const widthAtBottom = pw;
+    const widthAtTop = pw * (1-frac*.7);
+    const widthAtEnd = pw * (1-(yOff+segH)/ph*.7);
+    const xCenter = px + pw/2;
+
+    const x0 = xCenter - widthAtBottom/2, x1 = xCenter + widthAtBottom/2;
+    const xT0 = xCenter - widthAtEnd/2, xT1 = xCenter + widthAtEnd/2;
+    const y0 = py+ph-yOff, y1 = py+ph-yOff-segH;
+
+    const isH = hovSeg && hovSeg.id===seg.id;
+
+    // Fill
+    ctx.beginPath();
+    ctx.moveTo(x0,y0); ctx.lineTo(x1,y0);
+    ctx.lineTo(xT1,y1); ctx.lineTo(xT0,y1);
+    ctx.closePath();
+    ctx.fillStyle = isH ? seg.colLight+'CC' : seg.col+'99';
+    ctx.fill();
+    ctx.strokeStyle = seg.colLight+'BB'; ctx.lineWidth=isH?1.5:.6;
+    ctx.stroke();
+
+    // Hatching pattern (woodblock effect)
+    if(segH > 20){
+      ctx.save();
+      ctx.clip();
+      for(let y=y0;y>y1;y-=8){
+        ctx.beginPath();
+        ctx.moveTo(xT0,y); ctx.lineTo(xT1,y);
+        ctx.strokeStyle=`rgba(255,255,255,.08)`; ctx.lineWidth=.5; ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    // Label
+    if(segH > 18){
+      ctx.save();
+      const midY = (y0+y1)/2;
+      ctx.font=`600 ${Math.min(9,Math.max(7,segH/6))}px "Josefin Sans",sans-serif`;
+      ctx.fillStyle=`rgba(255,255,255,.85)`;
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.shadowColor='rgba(0,0,0,.4)'; ctx.shadowBlur=4;
+      ctx.fillText(seg.pct+'%', xCenter, midY);
+      if(segH > 28){
+        ctx.font=`400 ${Math.min(8,segH/7)}px "Josefin Sans",sans-serif`;
+        ctx.fillStyle='rgba(255,255,255,.55)';
+        ctx.fillText(seg.label.slice(0,18), xCenter, midY+11);
+      }
+      ctx.restore();
+    }
+
+    // Right connector label
+    if(segH > 14){
+      const midY = (y0+y1)/2;
+      ctx.save();
+      ctx.font=`500 8px "Josefin Sans",sans-serif`;
+      ctx.fillStyle=`rgba(${hexRgbSimple(seg.col).join(',')},0.7)`;
+      ctx.textAlign='left'; ctx.textBaseline='middle';
+      ctx.fillText(`$${seg.valB}B`, xCenter+widthAtBottom/2+8, midY);
+      ctx.restore();
+    }
+
+    yOff += segH;
+  });
+
+  // Pyramid base label
+  ctx.save();
+  ctx.font='italic 9px "Noto Serif",serif'; ctx.fillStyle='rgba(26,16,8,.35)';
+  ctx.textAlign='center'; ctx.textBaseline='top';
+  ctx.fillText('96 triệu dân', px+pw/2, py+ph+8);
+  ctx.restore();
+}
+
+function drawDonut(pad, cw2, ch2){
+  const dx = pad.l + cw2*.72+20;
+  const dy = pad.t + ch2/2;
+  const dr = Math.min(cw2*.15, ch2*.42);
+  const segments = SEGMENTS;
+
+  ctx.save();
+  ctx.font='700 11px "Josefin Sans",sans-serif'; ctx.fillStyle='rgba(26,16,8,.55)';
+  ctx.textAlign='center'; ctx.textBaseline='bottom';
+  ctx.fillText('PHÂN BỔ TÀI SẢN', dx, pad.t-12);
+  ctx.restore();
+
+  let angleStart = -Math.PI/2;
+  const total = segments.reduce((s,g)=>s+g.pct,0);
+
+  segments.forEach(seg => {
+    const angle = (seg.pct/total)*Math.PI*2 * animT;
+    const isH = hovSeg && hovSeg.id===seg.id;
+    const innerR = dr*.55, outerR = dr*(isH?1.05:1);
+
+    ctx.beginPath();
+    ctx.arc(dx,dy,outerR,angleStart,angleStart+angle);
+    ctx.arc(dx,dy,innerR,angleStart+angle,angleStart,true);
+    ctx.closePath();
+    ctx.fillStyle = isH ? seg.colLight+'DD' : seg.col+'AA';
+    ctx.fill();
+    ctx.strokeStyle='rgba(245,237,216,.8)'; ctx.lineWidth=isH?2:1;
+    ctx.stroke();
+
+    // Outer tick
+    const midA = angleStart + angle/2;
+    const tx1=Math.cos(midA)*(outerR+3)+dx, ty1=Math.sin(midA)*(outerR+3)+dy;
+    const tx2=Math.cos(midA)*(outerR+9)+dx, ty2=Math.sin(midA)*(outerR+9)+dy;
+    ctx.beginPath(); ctx.moveTo(tx1,ty1); ctx.lineTo(tx2,ty2);
+    ctx.strokeStyle=seg.col+'88'; ctx.lineWidth=1.2; ctx.stroke();
+
+    // Label outside
+    if(angle > .3){
+      const lx=Math.cos(midA)*(outerR+20)+dx, ly2=Math.sin(midA)*(outerR+20)+dy;
+      ctx.save();
+      ctx.font=`500 8px "Josefin Sans",sans-serif`;
+      ctx.fillStyle=seg.col;
+      ctx.textAlign=Math.cos(midA)>0?'left':'right'; ctx.textBaseline='middle';
+      ctx.shadowColor='rgba(245,237,216,.9)'; ctx.shadowBlur=5;
+      ctx.fillText(seg.pct+'%', lx, ly2);
+      ctx.restore();
+    }
+
+    angleStart += angle;
+  });
+
+  // Center text
+  ctx.save();
+  ctx.font='700 14px "Josefin Sans",sans-serif'; ctx.fillStyle='rgba(26,16,8,.7)';
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText('$1,040B', dx, dy-8);
+  ctx.font='italic 9px "Noto Serif",serif'; ctx.fillStyle='rgba(26,16,8,.35)';
+  ctx.fillText('Tổng tài sản', dx, dy+8);
+  ctx.restore();
+
+  // Legend below donut
+  const legX = dx - dr*.8, legY = dy + dr + 20;
+  segments.forEach((seg,i) => {
+    const row = Math.floor(i/2), col2 = i%2;
+    const x = legX + col2*(dr*1.05);
+    const y = legY + row*16;
+    ctx.save();
+    ctx.fillStyle=seg.col; ctx.fillRect(x,y,10,8);
+    ctx.font='400 7.5px "Josefin Sans",sans-serif'; ctx.fillStyle='rgba(26,16,8,.5)';
+    ctx.textAlign='left'; ctx.textBaseline='middle';
+    ctx.fillText(seg.label.slice(0,16), x+13, y+4);
+    ctx.restore();
+  });
+}
+
+function hexRgbSimple(h){
+  if(!h||h.length<7) return [100,100,100];
+  return [parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)];
+}
+
+// ── INTERACTION ──
+cvs.addEventListener('mousemove', e => {
+  const rc=cvs.getBoundingClientRect();
+  const sx=e.clientX-rc.left, sy=e.clientY-rc.top;
+  const pad={l:80,r:60,t:50,b:80};
+  const cw2=W-pad.l-pad.r, ch2=H-pad.t-pad.b;
+  const dx=pad.l+cw2*.72+20, dy=pad.t+ch2/2, dr=Math.min(cw2*.15,ch2*.42);
+  const dist=Math.sqrt((sx-dx)**2+(sy-dy)**2);
+
+  let found=null;
+  if(dist<dr && dist>dr*.55){
+    let ang=Math.atan2(sy-dy,sx-dx)+Math.PI/2;
+    if(ang<0) ang+=Math.PI*2;
+    let acc=0;
+    const total=SEGMENTS.reduce((s,g)=>s+g.pct,0);
+    for(const seg of SEGMENTS){
+      acc+=(seg.pct/total)*Math.PI*2;
+      if(ang<acc){found=seg;break;}
+    }
+  }
+  // Pyramid hit test
+  if(!found){
+    const px=pad.l+cw2*.46+20, pw=cw2*.26, ph=ch2, py=pad.t;
+    const total=SEGMENTS.reduce((s,g)=>s+g.pct,0);
+    let yOff=0;
+    const segs=[...SEGMENTS].reverse();
+    for(const seg of segs){
+      const segH=(seg.pct/total)*ph;
+      const y1=py+ph-yOff, y2=py+ph-yOff-segH;
+      if(sy>=y2&&sy<=y1&&sx>=px&&sx<=px+pw){found=seg;break;}
+      yOff+=segH;
+    }
+  }
+
+  hovSeg=found;
+  cvs.style.cursor=found?'pointer':'default';
+  const tip=document.getElementById('tip');
+  if(found){
+    tip.style.display='block';
+    tip.style.borderLeftColor=found.rust2||found.col;
+    const ox=e.clientX>window.innerWidth*.6?e.clientX-330:e.clientX+16;
+    tip.style.left=ox+'px'; tip.style.top=Math.max(60,e.clientY-90)+'px';
+    document.getElementById('tb').textContent=found.badge;
+    document.getElementById('tn').textContent=found.label; document.getElementById('tn').style.color=found.colLight;
+    document.getElementById('tp').textContent=found.pct+'% tài sản quốc gia (~$'+found.valB+'B)';
+    document.getElementById('tp').style.color=found.colLight;
+    document.getElementById('td').textContent=found.desc;
+    document.getElementById('ts').innerHTML=(found.subs||[]).map(s=>`<div class="tts"><div class="ttsv">${s.val}</div><div class="ttsk">${s.name}</div></div>`).join('');
+  } else tip.style.display='none';
+});
+
+// ── RIGHT PANEL ──
+let tab='dist';
+function sw(t,el){tab=t;document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));el.classList.add('on');renderPanel();}
+function renderPanel(){if(tab==='dist')renderDist();else if(tab==='comp')renderComp();else renderInsights();}
+
+function renderDist(){
+  const b=document.getElementById('rbody');
+  const sorted=[...SEGMENTS].sort((a,x)=>x.pct-a.pct);
+  b.innerHTML=`<div class="section">
+    <div class="sec-h">Phân phối tài sản theo nhóm</div>
+    ${sorted.map(s=>`<div class="wealth-row" onclick="">
+      <div class="wr-label" style="color:${s.colLight}">${s.label.slice(0,18)}</div>
+      <div class="wr-bar-w"><div class="wr-bar" style="width:${s.pct}%;background:${s.col}"></div></div>
+      <div class="wr-pct" style="color:${s.colLight}">${s.pct}%</div>
+      <div class="wr-val">$${s.valB}B</div>
+    </div>`).join('')}
+  </div>
+  <div class="section">
+    <div class="sec-h">Chi tiết theo nhóm</div>
+    ${sorted.map(s=>`
+      <div style="margin-bottom:8px;padding:8px;background:rgba(${hexRgbSimple(s.col).join(',')},0.05);border-left:3px solid ${s.col}">
+        <div style="font-family:'Josefin Sans',sans-serif;font-size:9px;font-weight:600;letter-spacing:.1em;color:${s.colLight};margin-bottom:4px">${s.badge} — ${s.pct}%</div>
+        <div style="font-family:'Noto Serif',serif;font-style:italic;font-size:11px;color:var(--muted);line-height:1.55">${s.desc.slice(0,120)}…</div>
+      </div>`).join('')}
+  </div>`;
+}
+
+function renderComp(){
+  const b=document.getElementById('rbody');
+  b.innerHTML=`<div class="section">
+    <div class="sec-h">Chỉ số Gini — So sánh quốc tế</div>
+    ${COMPARATORS.map(c=>`<div class="comp-row">
+      <div class="cr-country" style="color:${c.col}">${c.country}</div>
+      <div class="cr-gini" style="color:${c.col}">${c.gini}</div>
+      <div class="cr-bw"><div class="cr-bf" style="width:${(c.gini/55)*100}%;background:${c.col}"></div></div>
+    </div>`).join('')}
+    <div style="margin-top:8px;font-family:'Noto Serif',serif;font-style:italic;font-size:10.5px;color:var(--muted)">* Gini: 0=bình đẳng tuyệt đối, 1=bất bình đẳng tuyệt đối. VN ở mức trung bình so với ĐNA nhưng đang tăng nhanh.</div>
+  </div>
+  <div class="section">
+    <div class="sec-h">Top 1% vs. Bottom 50%</div>
+    ${COMPARATORS.map(c=>`<div class="comp-row">
+      <div class="cr-country" style="color:${c.col}">${c.country}</div>
+      <div class="cr-gini" style="color:${c.col}">T1%: ${c.top1}%</div>
+      <div class="cr-bw"><div class="cr-bf" style="width:${(c.top1/40)*100}%;background:${c.col}"></div></div>
+    </div>`).join('')}
+    <div style="margin-top:8px;font-family:'Noto Serif',serif;font-style:italic;font-size:10.5px;color:var(--muted)">* Share of wealth owned by top 1% of population.</div>
+  </div>`;
+}
+
+function renderInsights(){
+  const b=document.getElementById('rbody');
+  b.innerHTML=`<div class="section">
+  ${[
+    {c:'#8B2010',t:'Nhà nước là tỷ phú lớn nhất',d:'38% tài sản quốc gia ($395B) thuộc sở hữu Nhà nước qua đất đai, DNNN và hạ tầng. Theo Hiến pháp 2013, đất đai 100% thuộc "toàn dân do Nhà nước đại diện". Quyền sử dụng đất (không phải quyền sở hữu) mới được mua bán — nguồn gốc của mọi tranh chấp BĐS.'},
+    {c:'#1A2870',t:'Top 0.1% = 8% wealth',d:'~100,000 người nắm $83B. 30+ tỷ phú USD cộng với 70,000+ triệu phú USD. Tăng trưởng tài sản nhóm siêu giàu nhanh hơn tăng trưởng GDP 2-3 lần. BĐS đô thị cao cấp là kênh tích lũy chính.'},
+    {c:'#1A5030',t:'BĐS đô thị: Bẫy bất bình đẳng',d:'Căn hộ Hà Nội/HCM tăng 3-5x trong 10 năm. Thu nhập trung bình $6,000/năm, giá căn hộ trung bình $80,000+. P/E (giá/thu nhập) = 13x — cao nhất ĐNA. Người không có BĐS từ trước 2015 không có cơ hội tích lũy wealth tương đương.'},
+    {c:'#6A4A20',t:'Khoảng cách đô thị/nông thôn',d:'Thu nhập bình quân đô thị gấp 2.1x nông thôn. Tài sản đô thị gấp 3-4x. Dân tộc thiểu số chiếm 15% dân số nhưng >50% số hộ nghèo. Di cư từ nông thôn → đô thị tăng bất bình đẳng ngắn hạn nhưng giảm dài hạn.'},
+    {c:'#1A1A8B',t:'FDI: Của cải không ở lại',d:'$73B tài sản FDI (7% tổng). Samsung, LG, Intel... mang công nghệ và việc làm nhưng lợi nhuận về lại cổ đông nước ngoài. Transfer pricing, double Irish/Dutch arrangements giảm thuế. Chuyển đổi FDI sang công nghệ cao và R&D là chìa khóa tăng giá trị nội địa.'},
+    {c:'#8B6010',t:'Gini đang tăng — cảnh báo',d:'Gini VN tăng từ 0.35 (2010) lên 0.38 (2024). Tốc độ tăng nhanh hơn hầu hết ĐNA. Đặc biệt, tài sản (wealth inequality) bất bình đẳng hơn thu nhập (income inequality) 2-3 lần. Cải cách thuế bất động sản và thuế thừa kế là công cụ chưa được sử dụng.'},
+  ].map(i=>`<div class="insight-card" style="border-left-color:${i.c}">
+    <div class="ic-h" style="color:${i.c}">${i.t}</div>
+    <div class="ic-b">${i.d}</div>
+  </div>`).join('')}
+  </div>`;
+}
+
+function hexRgbSimple(h){
+  if(!h||h.length<7) return [100,100,100];
+  return [parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)];
+}
+
+setInterval(()=>document.getElementById('clk').textContent=new Date().toLocaleTimeString('vi-VN',{timeZone:'Asia/Ho_Chi_Minh',hour:'2-digit',minute:'2-digit',second:'2-digit'}),1000);
+
+renderPanel();
+drawFrame();
+</script>
+</body>
+</html>
